@@ -1,10 +1,10 @@
-"use client";
+"use client"
 
-import { motion } from "framer-motion";
-import { useTranslation } from "@/hooks/use-translation";
+import { motion } from "framer-motion"
+import { useTranslation } from "@/hooks/use-translation"
 
 export default function AboutUsPage() {
-  const { t } = useTranslation();
+  const { t } = useTranslation()
 
   return (
     <motion.section
@@ -20,5 +20,5 @@ export default function AboutUsPage() {
         {t("about.description")}
       </p>
     </motion.section>
-  );
+  )
 }

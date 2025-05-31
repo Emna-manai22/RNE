@@ -142,6 +142,8 @@ const translations = {
       hackathon: "لـ Hack4Justice 2025",
       rights: "جميع الحقوق محفوظة.",
     },
+    
+
   },
 }
 
