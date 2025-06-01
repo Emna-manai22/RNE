@@ -11,6 +11,8 @@ import {
 import { useTheme } from "@/hooks/use-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { useTranslation } from "@/hooks/use-translation";
+import Link from "next/link";
+
 
 const languages = [
   { code: "en", name: "English", flag: "🇺🇸" },
@@ -33,15 +35,30 @@ export function Header() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="flex items-center space-x-2"
-          >
-            <img src="/RNE.jpg" alt="Logo" className="w-[100px] h-[50px]" />
-          </motion.div>
+        
+<Link href="/" passHref>
+  <motion.div
+    whileHover={{ scale: 1.05 }}
+    className="flex items-center space-x-2 cursor-pointer"
+  >
+    {/* Light mode logo */}
+    <img
+      src="/RNE2.png"
+      alt="Logo clair"
+      className="w-[100px] h-[60px] dark:hidden"
+    />
+
+    {/* Dark mode logo */}
+    <img
+      src="/RNE1.png"
+      alt="Logo sombre"
+      className="w-[100px] h-[60px] hidden dark:block"
+    />
+  </motion.div>
+</Link>
 
           {/* Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-10">
             <a
               href="/"
               className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
@@ -55,7 +72,7 @@ export function Header() {
               {t("nav.about")}
             </a>
             <a
-              href="https://www.registre-entreprises.tn"
+              href="https://home.registre-entreprises.tn/contact/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center"
@@ -85,7 +102,10 @@ export function Header() {
                 {languages.map((lang) => (
                   <DropdownMenuItem
                     key={lang.code}
-                    onClick={() => setLanguage(lang.code as "en" | "fr" | "ar")}
+                    onClick={() => {
+                      setLanguage(lang.code as "en" | "fr" | "ar");
+                      window.location.reload();
+                    }}
                     className="flex items-center space-x-2"
                   >
                     <span>{lang.flag}</span>

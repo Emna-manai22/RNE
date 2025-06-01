@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Send, ArrowLeft, Loader2 } from "lucide-react"
@@ -9,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/hooks/use-language"
 import { useTranslation } from "@/hooks/use-translation"
-import { ChatMessage } from "@/components/chat-message"
 import { TypingIndicator } from "@/components/typing-indicator"
 
 interface Message {
@@ -24,103 +21,76 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ onBack }: ChatInterfaceProps) {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState("")
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "welcome",
+      content: "Bienvenue ! Comment puis-je vous aider aujourd'hui ?",
+      isUser: false,
+      timestamp: new Date(),
+    },
+  ])
+  const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
   const { language } = useLanguage()
   const { t } = useTranslation()
 
+  // Scroll interne seulement
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (chatContainerRef.current && messagesEndRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+    }
   }
 
+  // Met à jour le message de bienvenue selon la langue
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  useEffect(() => {
-    // Welcome message
     const welcomeMessage: Message = {
-      id: "welcome-message", // Use a static ID for the welcome message
+      id: "welcome",
       content: t("chat.welcome"),
       isUser: false,
       timestamp: new Date(),
     }
-    // Set messages only if it's empty or the welcome message isn't the first one
-    // This prevents re-adding the welcome message if other state changes trigger a re-render
-    setMessages((prevMessages) => {
-      if (prevMessages.length === 0 || prevMessages[0].id !== "welcome-message") {
-        return [welcomeMessage]
-      }
-      // If language changes, replace the old welcome message
-      if (prevMessages[0].id === "welcome-message" && prevMessages[0].content !== welcomeMessage.content) {
-        return [welcomeMessage, ...prevMessages.slice(1)]
-      }
-      return prevMessages
-    })
-  }, [language, t]) // t is now memoized and only changes when language changes
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return
+    setMessages((prev) =>
+      prev[0]?.id === "welcome"
+        ? [welcomeMessage, ...prev.slice(1)]
+        : [welcomeMessage, ...prev]
+    )
+  }, [language, t])
 
-    const userMessage: Message = {
+  // Envoi du message
+  const handleSend = () => {
+    if (!inputValue.trim() || isLoading) return
+
+    const newUserMessage: Message = {
       id: Date.now().toString(),
-      content: input,
+      content: inputValue,
       isUser: true,
       timestamp: new Date(),
     }
 
-    setMessages((prev) => [...prev, userMessage])
-    setInput("")
+    setMessages((prev) => [...prev, newUserMessage])
+    setInputValue("")
     setIsLoading(true)
-    setError(null)
 
-    try {
-      const response = await fetch("http://localhost:3000/chatbot/message", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: input,
-          language: language,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to get response from server")
-      }
-
-      const data = await response.json()
-
-      const botMessage: Message = {
+    setTimeout(() => {
+      const botResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: data.response || data.message || "Sorry, I could not process your request.",
+        content: t("chatbot.no_data"),
         isUser: false,
         timestamp: new Date(),
       }
-
-      setMessages((prev) => [...prev, botMessage])
-    } catch (err) {
-      setError(t("chat.error"))
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `${t("chat.error")} ${t("chat.redirect")} https://www.registre-entreprises.tn`,
-        isUser: false,
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, errorMessage])
-    } finally {
+      setMessages((prev) => [...prev, botResponse])
       setIsLoading(false)
-    }
+      scrollToBottom()
+    }, 1000)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
-      sendMessage()
+      handleSend()
     }
   }
 
@@ -129,59 +99,123 @@ export function ChatInterface({ onBack }: ChatInterfaceProps) {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
-      className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900"
+      className="h-screen flex flex-col bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-4"
     >
-      {/* Chat Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center space-x-4">
-        <Button variant="ghost" size="sm" onClick={onBack} className="flex items-center space-x-2">
-          <ArrowLeft className="w-4 h-4" />
-          <span>{t("chat.back")}</span>
-        </Button>
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t("chat.title")}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t("chat.subtitle")}</p>
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm rounded-t-lg overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-5 bg-indigo-600 text-white">
+          <button onClick={onBack} className="flex items-center space-x-2 hover:text-indigo-200 transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            <span>{t("chat.back")}</span>
+          </button>
+
+          <div className="flex items-center">
+            <div className="bg-indigo-800 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="font-bold text-lg">{t("chat.title")}</h2>
+              <p className="text-xs text-indigo-200">En ligne • Tunisie</p>
+            </div>
+          </div>
+
+          <div className="flex space-x-2">
+            <button className="p-2 rounded-full hover:bg-indigo-500 transition">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <AnimatePresence>
-          {messages.map((message) => (
-            <ChatMessage key={message.id} message={message} />
-          ))}
-        </AnimatePresence>
-        {isLoading && <TypingIndicator />}
-        <div ref={messagesEndRef} />
+      {/* Zone de Messages - Scroll Interne */}
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto p-6 bg-white dark:bg-gray-800 space-y-4"
+      >
+        <div className="max-w-3xl mx-auto w-full">
+          <AnimatePresence>
+            {messages.map((message) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-md px-4 py-3 rounded-2xl ${
+                    message.isUser
+                      ? "bg-indigo-600 text-white rounded-tr-none"
+                      : "bg-gray-100 text-gray-800 rounded-tl-none dark:bg-gray-700 dark:text-white"
+                  }`}
+                >
+                  <p>{message.content}</p>
+                  <div
+                    className={`text-xs mt-1 ${
+                      message.isUser ? "text-indigo-200" : "text-gray-500 dark:text-gray-400"
+                    }`}
+                  >
+                    {new Date(message.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {isLoading && <TypingIndicator />}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
-      {/* Input */}
-      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
-        <div className="flex space-x-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={t("chat.placeholder")}
-            disabled={isLoading}
-            className="flex-1"
-          />
+      {/* Zone d'entrée fixe */}
+      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 rounded-b-lg">
+        <div className="flex items-center space-x-2 max-w-3xl mx-auto">
+          <div className="flex-1 flex items-center bg-gray-100 dark:bg-gray-700 rounded-2xl px-4 py-2">
+            <button className="p-2 text-gray-500 hover:text-indigo-600">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              </svg>
+            </button>
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={t("chat.placeholder")}
+              disabled={isLoading}
+              className="flex-1 bg-transparent outline-none text-gray-800 dark:text-white"
+            />
+            <button className="p-2 text-gray-500 hover:text-indigo-600">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+          </div>
           <Button
-            onClick={sendMessage}
-            disabled={!input.trim() || isLoading}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={handleSend}
+            disabled={!inputValue.trim() || isLoading}
+            className="ml-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-2xl flex items-center transition-colors"
           >
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                {t("chat.send")}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 010-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </>
+            )}
           </Button>
         </div>
-        {error && (
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-red-500 text-sm mt-2"
-          >
-            {error}
-          </motion.p>
-        )}
+
+       
       </div>
     </motion.div>
   )

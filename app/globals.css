@@ -4,6 +4,29 @@
 
 @layer base {
   :root {
+    --primary: #306cc7;
+    --primary-foreground: #ffffff;
+    --secondary: #29B6F6;
+    --muted: #f5f5f5;
+    --card: #ffffff;
+    --background: #ffffff;
+    --foreground: #000000;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: #121212;
+    --foreground: #ffffff;
+    --card: #1e1e1e;
+    --primary: #0D47A1;
+    --primary-foreground: #ffffff;
+    --secondary: #1c8ec9;
+    --muted: #2a2a2a;
+  }
+}
+
+@layer base {
+  :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
